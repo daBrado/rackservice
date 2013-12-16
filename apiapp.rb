@@ -8,7 +8,7 @@ require 'logger'
 require 'rack'
 
 HTTP_OK = 200
-HTTP_REDIRECT_FOUND = 302
+HTTP_BAD_REQUEST = 400
 HTTP_NOT_FOUND = 404
 HTTP_METHOD_NOT_ALLOWED = 405
 
@@ -30,21 +30,21 @@ class APIApp
     }), []] if req.options?
     cmd, args, named_args = (
       _, cmd, *args = req.path_info.split('/').map {|e| Rack::Utils::unescape e}
-      cmd = cmd.to_sym rescue nil
+      cmd = cmd.to_sym rescue :''
       ignore_params = env['HTTP_X_IGNORE_PARAMS'].split(',').map{|p|p.strip} rescue []
       named_args = Hash[req.params.reject{|k,v| ignore_params.include? k}.map{|k,v| [k.to_sym,v]}]
       [cmd, args, named_args]
     )
     return [HTTP_NOT_FOUND, h, []] if !@api.class.public_method_defined?(cmd)
     return [HTTP_METHOD_NOT_ALLOWED, h, []] if !@api.class.allowed_method?(req.request_method, cmd)
-    result = Fiber.new do
+    Fiber.new do
       Thread.current[:loginfo] = [req, cmd]
-      if named_args.empty?
-        result = @api.public_send(cmd, *args)
-      else
-        result = @api.public_send(cmd, *args, **named_args)
+      begin
+        result = named_args.empty? ? @api.public_send(cmd, *args) : @api.public_send(cmd, *args, **named_args)
+        [HTTP_OK, h.merge({"Content-Type" => "text/plain"}), [result.to_s]]
+      rescue ArgumentError => e
+        [HTTP_BAD_REQUEST, h.merge({"Content-Type" => "text/plain"}), [e.to_s]]
       end
-    end.resume.to_s
-    [HTTP_OK, h.merge({"Content-Type" => "text/plain"}), [result]]
+    end.resume
   end
 end
