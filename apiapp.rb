@@ -36,7 +36,7 @@ class APIApp
       [cmd, args, named_args]
     )
     return [HTTP_NOT_FOUND, h, []] if !@api.class.public_method_defined?(cmd)
-    return [HTTP_METHOD_NOT_ALLOWED, h, []] if !@api.class.allowed_method?(req.request_method, cmd)
+    return [HTTP_METHOD_NOT_ALLOWED, h, []] if !(@api.class.const_get(req.request_method.to_sym).include?(cmd) rescue false)
     Fiber.new do
       Thread.current[:loginfo] = [req, cmd]
       begin
