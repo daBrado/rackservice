@@ -22,6 +22,7 @@ class APIApp
       "#{time.strftime '%FT%T%z'} #{req.ip} #{[req.referer, req.user_agent].map{|s|(s||'-').inspect}.join(' ')} #{cmd} #{msg}\n"
     }
     @api = api.new(*api_args, log: log, **api_named_args)
+    @version = %x{cd #{File.dirname(caller_locations(1,1)[0].path)}; git describe --match 'v*'}.chomp
   end
   def cmds
     (HTTP_METHODS & @api.class.constants).flat_map{|m| @api.class.const_get(m)} & @api.methods
@@ -45,6 +46,7 @@ class APIApp
     )
     if cmd == nil
       [HTTP_NOT_FOUND, h.merge({"Content-Type" => "text/plain"}), [
+        "#{req.url} #{@api.class} #{@version}\n",
         cmds.map{|c|
           ps = @api.method(c).parameters
           data = ps.map{|p| (p[0]==:key && "#{p[1]}=") || (p[0]==:keyrest && "...") || nil}.compact.join('&')
