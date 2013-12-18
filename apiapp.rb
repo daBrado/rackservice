@@ -41,7 +41,7 @@ class APIApp
     (@api.class.constants & HTTP_METHODS).reduce{|memo,http_method| @api.class.const_get(http_method).include?(cmd) ? http_method : memo}
   end
   def helptext(req)
-    "#{req.url} #{@api.class} #{@version}\n" +
+    "#{@api.class} #{@version}\n" +
     cmds.map{|c|
       ps = @api.method(c).parameters
       data = ps.map{|p| (p[0]==:key && "#{p[1]}=") || (p[0]==:keyrest && "...") || nil}.compact.join('&')
