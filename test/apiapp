@@ -1,0 +1,42 @@
+#!/usr/bin/env ruby
+
+require './apiapp'
+
+require 'minitest/spec'
+require 'minitest/autorun'
+require 'net/http'
+require 'rack'
+
+class TestAPI
+  GET = [:get]
+  POST = [:post]
+  def initialize(log:nil)
+  end
+  def get(param, name:nil)
+    "get #{param} #{name}"
+  end
+  def post(param, name:nil)
+    "post #{param} #{name}"
+  end
+end
+
+describe APIApp do
+  PORT = 4560
+  before do
+    @server = Thread.new{ Rack::Server.start(Port:PORT,app:APIApp.new(TestAPI)) }
+    loop { @server.join(0); break if (Net::HTTP.get_response('localhost', '/', PORT) rescue nil) }
+  end
+  it "can get" do
+    http = Net::HTTP.new('localhost', PORT)
+    req = Net::HTTP::Get.new('/get/param?name=value')
+    res = http.request(req)
+    res.body.must_equal "get param value"
+  end
+  it "can post" do
+    http = Net::HTTP.new('localhost', PORT)
+    req = Net::HTTP::Post.new('/post/param')
+    req.set_form_data({'name'=>'value'})
+    res = http.request(req)
+    res.body.must_equal "post param value"
+  end
+end
