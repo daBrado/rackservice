@@ -20,10 +20,10 @@ class TestAPI
   end
 end
 
-describe APIApp do
+describe RackService do
   PORT = 4560
   before do
-    @server = Thread.new{ Rack::Server.start(Port:PORT,app:APIApp.new(TestAPI)) }
+    @server = Thread.new{ Rack::Server.start(Port:PORT,app:RackService::App.new(TestAPI)) }
     loop { @server.join(0); break if (Net::HTTP.get_response('localhost', '/', PORT) rescue nil) }
   end
   it "can get" do
