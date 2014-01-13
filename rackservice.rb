@@ -28,8 +28,7 @@ module RackService
       end
       HTTP_METHODS.each{|hm| define_method(hm.downcase){|*methods| api(hm, *methods) }}
       def method_added(m)
-        return if m == :initialize
-        api(@api_next || HTTP_METHODS.first, m)
+        api(@api_next || HTTP_METHODS.first, m) if public_instance_methods(false).include? m
       end
     end
   end
