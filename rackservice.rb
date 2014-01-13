@@ -10,26 +10,17 @@ require 'rack'
 module RackService
   class API
     HTTP_METHODS = [:GET, :POST, :PUT, :DELETE]
-    def api_methods
-      self.class.api_instance_methods
-    end
+    def api_methods; self.class.api_instance_methods; end
     HTTP_METHODS.each{|hm| define_method("#{hm.downcase}_methods"){ api_methods.select{|m,h|h==hm}.map{|m,_|m} }}
     class << self
-      def api_instance_methods
-        @api_instance_methods ||= {}
-      end
-      def api(http_method, *instance_methods)
-        public *instance_methods
-        if instance_methods.empty?
-          @api_next = http_method
-        else
-          instance_methods.each{|m| api_instance_methods[m] = http_method}
-        end
+      def api_instance_methods; @api_instance_methods ||= {}; end
+      def api(http_method, *methods)
+        public *methods
+        @api_next = http_method if methods.empty?
+        methods.each{|m| api_instance_methods[m] = http_method}
       end
       HTTP_METHODS.each{|hm| define_method(hm.downcase){|*methods| api(hm, *methods) }}
-      def method_added(m)
-        api(@api_next || HTTP_METHODS.first, m) if public_instance_methods(false).include? m
-      end
+      def method_added(m); api(@api_next || HTTP_METHODS.first, m) if public_instance_methods(false).include?(m); end
     end
   end
   class Request < Rack::Request
