@@ -1,18 +1,38 @@
 #
 # RackService
 #
-# A Rack application to use a Ruby object as a web service API.
+# A Rack application and API parent class to make a Ruby object into a web service API.
 #
 
 require 'logger'
 require 'rack'
 
 module RackService
-  HTTP_OK = 200
-  HTTP_BAD_REQUEST = 400
-  HTTP_NOT_FOUND = 404
-  HTTP_METHOD_NOT_ALLOWED = 405
-  HTTP_METHODS = [:GET, :POST, :PUT, :DELETE]
+  class API
+    HTTP_METHODS = [:GET, :POST, :PUT, :DELETE]
+    def api_methods
+      self.class.api_instance_methods
+    end
+    HTTP_METHODS.each{|hm| define_method("#{hm.downcase}_methods"){ api_methods.select{|m,h|h==hm}.map{|m,_|m} }}
+    class << self
+      def api_instance_methods
+        @api_instance_methods ||= {}
+      end
+      def api(http_method, *instance_methods)
+        public *instance_methods
+        if instance_methods.empty?
+          @api_next = http_method
+        else
+          instance_methods.each{|m| api_instance_methods[m] = http_method}
+        end
+      end
+      HTTP_METHODS.each{|hm| define_method(hm.downcase){|*methods| api(hm, *methods) }}
+      def method_added(m)
+        return if m == :initialize
+        api(@api_next || HTTP_METHODS.first, m)
+      end
+    end
+  end
   class Request < Rack::Request
     attr_reader :cmd, :args, :named_args
     def initialize(env)
@@ -24,6 +44,10 @@ module RackService
     end
   end
   class App
+    HTTP_OK = 200
+    HTTP_BAD_REQUEST = 400
+    HTTP_NOT_FOUND = 404
+    HTTP_METHOD_NOT_ALLOWED = 405
     def initialize(api, *api_args, log:Logger.new(STDERR), **api_named_args)
       @log = log
       @log.formatter = lambda{|_,time,_,msg| req = Thread.current[:req]
@@ -32,18 +56,12 @@ module RackService
       @api = api.new(*api_args, log: log, **api_named_args)
       @version = %x{cd #{File.dirname(caller_locations(1,1)[0].path)}; git describe --match 'v*'}.chomp
     end
-    def cmds
-      (HTTP_METHODS & @api.class.constants).flat_map{|m| @api.class.const_get(m)} & @api.methods
-    end
-    def cmd_method(cmd)
-      (@api.class.constants & HTTP_METHODS).reduce{|memo,http_method| @api.class.const_get(http_method).include?(cmd) ? http_method : memo}
-    end
     def helptext(req)
       "#{@api.class} #{@version}\n" +
-      cmds.map{|c|
+      @api.api_methods.map{|c,_|
         ps = @api.method(c).parameters
         data = ps.map{|p| (p[0]==:key && "#{p[1]}=") || (p[0]==:keyrest && "...") || nil}.compact.join('&')
-        "#{cmd_method(c)} #{c}/" +
+        "#{@api.api_methods[c]} #{c}/" +
           ps.map{|p| (p[0]==:req && "#{p[1]}") || (p[0]==:rest && "...") || nil}.compact.join('/') +
           (data.empty? ? "" : "?#{data}") + "\n"
       }.join
@@ -56,8 +74,8 @@ module RackService
         "Access-Control-Allow-Methods" => env['HTTP_ACCESS_CONTROL_REQUEST_METHOD']
       }), []] if req.options?
       return [HTTP_NOT_FOUND, h.merge({"Content-Type" => "text/plain"}), [helptext(req)]] if req.cmd == nil
-      return [HTTP_NOT_FOUND, h, []] if !cmds.include?(req.cmd)
-      return [HTTP_METHOD_NOT_ALLOWED, h, []] if req.request_method.to_sym != cmd_method(req.cmd)
+      return [HTTP_NOT_FOUND, h, []] if !@api.api_methods.include?(req.cmd)
+      return [HTTP_METHOD_NOT_ALLOWED, h, []] if req.request_method.to_sym != @api.api_methods[req.cmd]
       return Fiber.new do
         Thread.current[:req] = req
         begin

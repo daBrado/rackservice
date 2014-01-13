@@ -1,20 +1,19 @@
 #!/usr/bin/env ruby
 
-require './apiapp'
+require './rackservice'
 
 require 'minitest/spec'
 require 'minitest/autorun'
 require 'net/http'
 require 'rack'
 
-class TestAPI
-  GET = [:get]
-  POST = [:post]
+class TestAPI < RackService::API
   def initialize(log:nil)
   end
   def get(param, name:nil)
     "get #{param} #{name}"
   end
+  post
   def post(param, name:nil)
     "post #{param} #{name}"
   end
