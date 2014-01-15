@@ -15,22 +15,17 @@ class TestAPI < RackService::API
     @log = Logger.new(LOG)
     @log.formatter = RackService::LogFormatter
   end
-  def log(msg)
+  def log()
     LOG.reopen
-    @log.info msg
+    @log.info 'message'
     LOG.rewind
   end
-  private :log
   def get(param, name:nil)
-    response = "get #{param} #{name}"
-    log response
-    response
+    "get #{param} #{name}"
   end
   post
   def post(param, name:nil)
-    response = "post #{param} #{name}"
-    log response
-    response
+    "post #{param} #{name}"
   end
 end
 
@@ -40,11 +35,16 @@ describe RackService do
     @server = Thread.new{ Rack::Server.start(Port:PORT,app:RackService::App.new(TestAPI.new)) }
     loop { @server.join(0); break if (Net::HTTP.get_response('localhost', '/', PORT) rescue nil) }
   end
+  it "can log" do
+    http = Net::HTTP.new('localhost', PORT)
+    req = Net::HTTP::Get.new('/log', {'User-Agent' => 'RackService MiniTest'})
+    res = http.request(req)
+    LOG.read.must_match /^[^\n]+ 127\.0\.0\.1 "-" "RackService MiniTest" log message\n$/
+  end
   it "can get" do
     http = Net::HTTP.new('localhost', PORT)
     req = Net::HTTP::Get.new('/get/param?name=value')
     res = http.request(req)
-    LOG.read.must_match /get param value\n$/
     res.body.must_equal "get param value"
   end
   it "can post" do
@@ -52,7 +52,6 @@ describe RackService do
     req = Net::HTTP::Post.new('/post/param')
     req.set_form_data({'name'=>'value'})
     res = http.request(req)
-    LOG.read.must_match /post param value\n$/
     res.body.must_equal "post param value"
   end
 end
