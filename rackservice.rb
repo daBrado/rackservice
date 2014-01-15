@@ -38,12 +38,8 @@ module RackService
     HTTP_BAD_REQUEST = 400
     HTTP_NOT_FOUND = 404
     HTTP_METHOD_NOT_ALLOWED = 405
-    def initialize(api, *api_args, log:Logger.new(STDERR), **api_named_args)
-      @log = log
-      @log.formatter = lambda{|_,time,_,msg| req = Thread.current[:req]
-        "#{time.strftime '%FT%T%z'} #{req.ip} #{[req.referer, req.user_agent].map{|s|(s||'-').inspect}.join(' ')} #{req.cmd} #{msg}\n"
-      }
-      @api = api.new(*api_args, log: log, **api_named_args)
+    def initialize(api)
+      @api = api
       @version = %x{cd #{File.dirname(caller_locations(1,1)[0].path)}; git describe --match 'v*'}.chomp
     end
     def helptext(req)
@@ -67,7 +63,7 @@ module RackService
       return [HTTP_NOT_FOUND, h, []] if !@api.api_methods.include?(req.cmd)
       return [HTTP_METHOD_NOT_ALLOWED, h, []] if req.request_method.to_sym != @api.api_methods[req.cmd]
       return Fiber.new do
-        Thread.current[:req] = req
+        Thread.current[:rackservice_request] = req
         begin
           result = req.named_args.empty? ? @api.public_send(req.cmd, *req.args) : @api.public_send(req.cmd, *req.args, **req.named_args)
           [HTTP_OK, h.merge({"Content-Type" => "text/plain"}), [result.to_s]]
@@ -77,4 +73,7 @@ module RackService
       end.resume
     end
   end
+  LogFormatter = lambda{|_,time,_,msg| req = Thread.current[:rackservice_request]
+    "#{time.strftime '%FT%T%z'} #{req.ip} #{[req.referer, req.user_agent].map{|s|(s||'-').inspect}.join(' ')} #{req.cmd} #{msg}\n"
+  }
 end
