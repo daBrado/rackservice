@@ -25,23 +25,16 @@ module RackService
     end
   end
   class Request < Rack::Request
-    attr_reader :cmd, :args, :named_args
-    def params
-      if super.values == [nil]
-        JSON.parse URI.decode_www_form_component query_string
-      elsif media_type == 'application/json'
-        JSON.parse body.read
-      else
-        super
-      end
-    end
+    attr_reader :cmd, :args
     def initialize(env)
       super env
       _, @cmd, *@args = path_info.split('/').map {|e| Rack::Utils::unescape e}
       @cmd = cmd.to_sym rescue nil
-      ignore_params = env['HTTP_X_IGNORE_PARAMS'].split(',').map{|p|p.strip} rescue []
-      @named_args = Hash[params.reject{|k,v| ignore_params.include? k}.map{|k,v| [k.to_sym,v]}]
     end
+    def GET; JSON.parse URI.decode_www_form_component query_string rescue super; end
+    def POST; media_type == 'application/json' ? JSON.parse((b=body.read;body.rewind;b)) : super; end
+    def ignore_params; env['HTTP_X_IGNORE_PARAMS'].split(',').map{|p|p.strip} rescue []; end
+    def named_args; Hash[params.reject{|k,v| ignore_params.include? k}.map{|k,v| [k.to_sym,v]}]; end
   end
   class App
     HTTP_OK = 200
