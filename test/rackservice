@@ -23,6 +23,9 @@ class TestAPI < RackService::API
   def get(param, name:nil)
     "get #{param} #{name}"
   end
+  def get_json(param, name:nil)
+    ['get_json', param, name]
+  end
   post
   def post(param, name:nil)
     "post #{param} #{name}"
@@ -47,6 +50,12 @@ describe RackService do
     req = Net::HTTP::Get.new('/get/param?'+URI::encode_www_form(DATA))
     res = http.request req
     res.body.must_equal "get param value"
+  end
+  it "can get JSON" do
+    http = Net::HTTP.new('localhost', PORT)
+    req = Net::HTTP::Get.new('/get_json/param?'+URI::encode_www_form(DATA))
+    res = http.request req
+    JSON.parse(res.body).must_equal ['get_json', 'param', 'value']
   end
   it "can post" do
     http = Net::HTTP.new('localhost', PORT)

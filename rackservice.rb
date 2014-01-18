@@ -69,7 +69,8 @@ module RackService
         Thread.current[:rackservice_request] = req
         begin
           result = req.named_args.empty? ? @api.public_send(req.cmd, *req.args) : @api.public_send(req.cmd, *req.args, **req.named_args)
-          [HTTP_OK, h.merge({"Content-Type" => "text/plain"}), [result.to_s]]
+          result_json = result.to_json rescue nil
+          (JSON.parse result_json rescue nil) ? [HTTP_OK, h.merge({"Content-Type" => "application/json"}), [result_json]] : [HTTP_OK, h.merge({"Content-Type" => "text/plain"}), [result.to_s]]
         rescue ArgumentError => e
           [HTTP_BAD_REQUEST, h.merge({"Content-Type" => "text/plain"}), [e.to_s]]
         end
