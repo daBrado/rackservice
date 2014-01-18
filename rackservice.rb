@@ -33,7 +33,7 @@ module RackService
     end
     def GET; JSON.parse URI.decode_www_form_component query_string rescue super; end
     def POST; media_type == 'application/json' ? JSON.parse((b=body.read;body.rewind;b)) : super; end
-    def ignore_params; env['HTTP_X_IGNORE_PARAMS'].split(',').map{|p|p.strip} rescue []; end
+    def ignore_params; env['HTTP_IGNORE_PARAMS'].split(',').map{|p|p.strip} rescue []; end
     def named_args; Hash[params.reject{|k,v| ignore_params.include? k}.map{|k,v| [k.to_sym,v]}]; end
   end
   class App
