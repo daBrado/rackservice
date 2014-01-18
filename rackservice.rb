@@ -6,6 +6,7 @@
 
 require 'logger'
 require 'rack'
+require 'json'
 
 module RackService
   class API
@@ -25,6 +26,15 @@ module RackService
   end
   class Request < Rack::Request
     attr_reader :cmd, :args, :named_args
+    def params
+      if super.values == [nil]
+        JSON.parse URI.decode_www_form_component query_string
+      elsif media_type == 'application/json'
+        JSON.parse body.read
+      else
+        super
+      end
+    end
     def initialize(env)
       super env
       _, @cmd, *@args = path_info.split('/').map {|e| Rack::Utils::unescape e}

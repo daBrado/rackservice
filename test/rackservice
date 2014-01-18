@@ -31,6 +31,7 @@ end
 
 describe RackService do
   PORT = 4560
+  DATA = {name:'value'}
   before do
     @server = Thread.new{ Rack::Server.start(Port:PORT,app:RackService::App.new(TestAPI.new)) }
     loop { @server.join(0); break if (Net::HTTP.get_response('localhost', '/', PORT) rescue nil) }
@@ -38,20 +39,34 @@ describe RackService do
   it "can log" do
     http = Net::HTTP.new('localhost', PORT)
     req = Net::HTTP::Get.new('/log', {'User-Agent' => 'RackService MiniTest'})
-    res = http.request(req)
+    res = http.request req
     LOG.read.must_match /^[^\n]+ 127\.0\.0\.1 "-" "RackService MiniTest" log message\n$/
   end
   it "can get" do
     http = Net::HTTP.new('localhost', PORT)
-    req = Net::HTTP::Get.new('/get/param?name=value')
-    res = http.request(req)
+    req = Net::HTTP::Get.new('/get/param?'+URI::encode_www_form(DATA))
+    res = http.request req
     res.body.must_equal "get param value"
   end
   it "can post" do
     http = Net::HTTP.new('localhost', PORT)
     req = Net::HTTP::Post.new('/post/param')
-    req.set_form_data({'name'=>'value'})
-    res = http.request(req)
+    req.form_data = DATA
+    res = http.request req
+    res.body.must_equal "post param value"
+  end
+  it "can get with JSON" do
+    http = Net::HTTP.new('localhost', PORT)
+    req = Net::HTTP::Get.new('/get/param?'+URI::encode_www_form_component(DATA.to_json))
+    res = http.request req
+    res.body.must_equal "get param value"
+  end
+  it "can post with JSON" do
+    http = Net::HTTP.new('localhost', PORT)
+    req = Net::HTTP::Post.new('/post/param')
+    req.content_type = 'application/json'
+    req.body = DATA.to_json
+    res = http.request req
     res.body.must_equal "post param value"
   end
 end
