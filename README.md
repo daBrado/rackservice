@@ -32,7 +32,7 @@ For example, here is a `rackup` config for a simple key-value store API:
       end
     end
 
-    run RackService::App.new KeyValueAPI.new
+    run KeyValueAPI.new
 
 One could then interact with the service, e.g. with `curl`:
 

@@ -36,7 +36,7 @@ describe RackService do
   PORT = 4560
   DATA = {name:'value'}
   before do
-    @server = Thread.new{ Rack::Server.start(Port:PORT,app:RackService::App.new(TestAPI.new)) }
+    @server = Thread.new{ Rack::Server.start(Port:PORT,app:TestAPI.new) }
     loop { @server.join(0); break if (Net::HTTP.get_response('localhost', '/', PORT) rescue nil) }
   end
   it "can log" do
