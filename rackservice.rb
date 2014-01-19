@@ -54,7 +54,7 @@ module RackService
         begin
           result = req.named_args.empty? ? public_send(req.cmd, *req.args) : public_send(req.cmd, *req.args, **req.named_args)
           result_json = result.to_json rescue nil
-          (JSON.parse result_json rescue nil) ? [HTTP_OK, h.merge({"Content-Type" => "application/json"}), [result_json]] : [HTTP_OK, h.merge({"Content-Type" => "text/plain"}), [result.to_s]]
+          [HTTP_OK, *((JSON.parse result_json rescue nil) ? [h.merge({"Content-Type" => "application/json"}), [result_json]] : [h.merge({"Content-Type" => "text/plain"}), [result.to_s]])]
         rescue ArgumentError => e
           [HTTP_BAD_REQUEST, h.merge({"Content-Type" => "text/plain"}), [e.to_s]]
         end
