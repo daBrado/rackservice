@@ -42,49 +42,40 @@ describe RackService do
     @server = Thread.new{ Rack::Server.start(Port:PORT,app:TestAPI.new) }
     loop { @server.join(0); break if (Net::HTTP.get_response('localhost', '/', PORT) rescue nil) }
   end
+  def request req
+    Net::HTTP.new('localhost', PORT).request req
+  end
   it "can log" do
-    http = Net::HTTP.new('localhost', PORT)
-    req = Net::HTTP::Get.new('/log', {'User-Agent' => 'RackService MiniTest'})
-    res = http.request req
+    res = request Net::HTTP::Get.new('/log', {'User-Agent' => 'RackService MiniTest'})
     LOG.read.must_match /^[^\n]+ 127\.0\.0\.1 "-" "RackService MiniTest" log message\n$/
   end
   it "can get" do
-    http = Net::HTTP.new('localhost', PORT)
-    req = Net::HTTP::Get.new('/get/param?'+URI::encode_www_form(DATA))
-    res = http.request req
+    res = request Net::HTTP::Get.new('/get/param?'+URI::encode_www_form(DATA))
     res.body.must_equal "get param value"
   end
   it "can get JSON" do
-    http = Net::HTTP.new('localhost', PORT)
-    req = Net::HTTP::Get.new('/get_json/param?'+URI::encode_www_form(DATA))
-    res = http.request req
+    res = request Net::HTTP::Get.new('/get_json/param?'+URI::encode_www_form(DATA))
     JSON.parse(res.body).must_equal ['get_json', 'param', 'value']
   end
   it "can post" do
-    http = Net::HTTP.new('localhost', PORT)
     req = Net::HTTP::Post.new('/post/param')
     req.form_data = DATA
-    res = http.request req
+    res = request req
     res.body.must_equal "post param value"
   end
   it "can get with JSON" do
-    http = Net::HTTP.new('localhost', PORT)
-    req = Net::HTTP::Get.new('/get/param?'+URI::encode_www_form_component(DATA.to_json))
-    res = http.request req
+    res = request Net::HTTP::Get.new('/get/param?'+URI::encode_www_form_component(DATA.to_json))
     res.body.must_equal "get param value"
   end
   it "can get with JSON positional parameter" do
-    http = Net::HTTP.new('localhost', PORT)
-    req = Net::HTTP::Get.new('/get_complex/'+URI::encode_www_form_component(DATA.to_json))
-    res = http.request req
+    res = request Net::HTTP::Get.new('/get_complex/'+URI::encode_www_form_component(DATA.to_json))
     JSON.parse(res.body).must_equal DATA
   end
   it "can post with JSON" do
-    http = Net::HTTP.new('localhost', PORT)
     req = Net::HTTP::Post.new('/post/param')
     req.content_type = 'application/json'
     req.body = DATA.to_json
-    res = http.request req
+    res = request req
     res.body.must_equal "post param value"
   end
 end
