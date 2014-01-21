@@ -19,7 +19,8 @@ module RackService
     def initialize(env)
       super env
       _, @cmd, *@args = path_info.split('/').map {|e| Rack::Utils::unescape e}
-      @cmd = cmd.to_sym rescue nil
+      @cmd = @cmd.to_sym rescue nil
+      @args = @args.map{|a| JSON.parse a rescue a}
     end
     def GET; JSON.parse URI.decode_www_form_component query_string rescue super; end
     def POST; media_type == 'application/json' ? JSON.parse((b=body.read;body.rewind;b)) : super; end

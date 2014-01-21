@@ -23,6 +23,9 @@ class TestAPI < RackService::API
   def get(param, name:nil)
     "get #{param} #{name}"
   end
+  def get_complex(param)
+    param
+  end
   def get_json(param, name:nil)
     ['get_json', param, name]
   end
@@ -34,7 +37,7 @@ end
 
 describe RackService do
   PORT = 4560
-  DATA = {name:'value'}
+  DATA = {'name'=>'value'}
   before do
     @server = Thread.new{ Rack::Server.start(Port:PORT,app:TestAPI.new) }
     loop { @server.join(0); break if (Net::HTTP.get_response('localhost', '/', PORT) rescue nil) }
@@ -69,6 +72,12 @@ describe RackService do
     req = Net::HTTP::Get.new('/get/param?'+URI::encode_www_form_component(DATA.to_json))
     res = http.request req
     res.body.must_equal "get param value"
+  end
+  it "can get with JSON positional parameter" do
+    http = Net::HTTP.new('localhost', PORT)
+    req = Net::HTTP::Get.new('/get_complex/'+URI::encode_www_form_component(DATA.to_json))
+    res = http.request req
+    JSON.parse(res.body).must_equal DATA
   end
   it "can post with JSON" do
     http = Net::HTTP.new('localhost', PORT)
