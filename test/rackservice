@@ -53,36 +53,29 @@ describe RackService do
     @logio.read.must_match /^[^\n]+ 127\.0\.0\.1 "-" "RackService MiniTest" log message\n$/
   end
   it "can get help" do
-    res = request Net::HTTP::Get.new('/')
-    res.body.must_match /^TestAPI v.*/
+    request(Net::HTTP::Get.new('/')).body.must_match /^TestAPI v.*/
   end
   it "can get" do
-    res = request Net::HTTP::Get.new('/get/param?'+URI::encode_www_form(DATA))
-    res.body.must_equal "get param value"
+    request(Net::HTTP::Get.new('/get/param?'+URI::encode_www_form(DATA))).body.must_equal "get param value"
   end
   it "can get JSON" do
-    res = request Net::HTTP::Get.new('/get_json/param?'+URI::encode_www_form(DATA))
-    JSON.parse(res.body).must_equal ['get_json', 'param', 'value']
+    JSON.parse(request(Net::HTTP::Get.new('/get_json/param?'+URI::encode_www_form(DATA))).body).must_equal ['get_json', 'param', 'value']
   end
   it "can post" do
     req = Net::HTTP::Post.new('/post/param')
     req.form_data = DATA
-    res = request req
-    res.body.must_equal "post param value"
+    request(req).body.must_equal "post param value"
   end
   it "can get with JSON" do
-    res = request Net::HTTP::Get.new('/get/param?'+URI::encode_www_form_component(DATA.to_json))
-    res.body.must_equal "get param value"
+    request(Net::HTTP::Get.new('/get/param?'+URI::encode_www_form_component(DATA.to_json))).body.must_equal "get param value"
   end
   it "can get with JSON positional parameter" do
-    res = request Net::HTTP::Get.new('/get_complex/'+URI::encode_www_form_component(DATA.to_json))
-    JSON.parse(res.body).must_equal DATA
+    JSON.parse(request(Net::HTTP::Get.new('/get_complex/'+URI::encode_www_form_component(DATA.to_json))).body).must_equal DATA
   end
   it "can post with JSON" do
     req = Net::HTTP::Post.new('/post/param')
     req.content_type = 'application/json'
     req.body = DATA.to_json
-    res = request req
-    res.body.must_equal "post param value"
+    request(req).body.must_equal "post param value"
   end
 end
