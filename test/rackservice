@@ -8,17 +8,15 @@ require 'net/http'
 require 'rack'
 require 'stringio'
 
-LOG = StringIO.new
+NULLOG = Logger.new('/dev/null')
 
 class TestAPI < RackService::API
-  def initialize
-    @log = Logger.new(LOG)
+  def initialize(logio)
+    @log = Logger.new(logio)
     @log.formatter = RackService::LogFormatter
   end
   def log()
-    LOG.reopen
     @log.info 'message'
-    LOG.rewind
   end
   def get(param, name:nil)
     "get #{param} #{name}"
@@ -39,15 +37,20 @@ describe RackService do
   PORT = 4560
   DATA = {'name'=>'value'}
   before do
-    @server = Thread.new{ Rack::Server.start(Port:PORT,app:TestAPI.new) }
-    loop { @server.join(0); break if (Net::HTTP.get_response('localhost', '/', PORT) rescue nil) }
+    @logio = StringIO.new
+    @rack = Rack::Server.new(Port:PORT, server:'webrick', AccessLog: NULLOG, Logger: NULLOG, app:TestAPI.new(@logio))
+    t = Thread.new{ @rack.start }; while !(Net::HTTP.get_response('localhost', '/', PORT) rescue nil); t.join(0); end
+  end
+  after do
+    @rack.server.shutdown
   end
   def request req
     Net::HTTP.new('localhost', PORT).request req
   end
   it "can log" do
-    res = request Net::HTTP::Get.new('/log', {'User-Agent' => 'RackService MiniTest'})
-    LOG.read.must_match /^[^\n]+ 127\.0\.0\.1 "-" "RackService MiniTest" log message\n$/
+    request Net::HTTP::Get.new('/log', {'User-Agent' => 'RackService MiniTest'})
+    @logio.rewind
+    @logio.read.must_match /^[^\n]+ 127\.0\.0\.1 "-" "RackService MiniTest" log message\n$/
   end
   it "can get" do
     res = request Net::HTTP::Get.new('/get/param?'+URI::encode_www_form(DATA))
