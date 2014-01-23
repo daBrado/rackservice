@@ -31,7 +31,7 @@ module RackService
     def api_methods; self.class.api_instance_methods; end
     HTTP_METHODS.each{|hm| define_method("#{hm.downcase}_methods"){ api_methods.select{|m,h|h==hm}.map{|m,_|m} }}
     def helptext(req)
-      @version ||= %x{cd #{File.dirname(caller_locations(1,1)[0].path)}; git describe --match 'v*'}.chomp
+      @version ||= %x{cd #{File.dirname(caller_locations(1,1)[0].path)}; git describe --always --match 'v*' 2>/dev/null}.chomp
       "#{self.class} #{@version}\n" + api_methods.map{|c,_|
         ps = method(c).parameters
         data = ps.map{|p| (p[0]==:key && "#{p[1]}=") || (p[0]==:keyrest && "...") || nil}.compact.join('&')
