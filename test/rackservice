@@ -52,6 +52,10 @@ describe RackService do
     @logio.rewind
     @logio.read.must_match /^[^\n]+ 127\.0\.0\.1 "-" "RackService MiniTest" log message\n$/
   end
+  it "can get help" do
+    res = request Net::HTTP::Get.new('/')
+    res.body.must_match /^TestAPI v.*/
+  end
   it "can get" do
     res = request Net::HTTP::Get.new('/get/param?'+URI::encode_www_form(DATA))
     res.body.must_equal "get param value"
