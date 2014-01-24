@@ -38,11 +38,11 @@ describe RackService do
   DATA = {'name'=>'value'}
   before do
     @logio = StringIO.new
-    @rack = Rack::Server.new(Port:PORT, server:'webrick', AccessLog: NULLOG, Logger: NULLOG, app:TestAPI.new(@logio))
-    t = Thread.new{ @rack.start }; while !(Net::HTTP.get_response('localhost', '/', PORT) rescue nil); t.join(0); end
+    rack = Rack::Server.new(Port:PORT, server:'webrick', AccessLog: NULLOG, Logger: NULLOG, app:TestAPI.new(@logio))
+    t = Thread.new{rack.start{|s|@server=s}}; while !(Net::HTTP.get_response('localhost', '/', PORT) rescue nil); t.join(0); end
   end
   after do
-    @rack.server.shutdown
+    @server.shutdown
   end
   def request req
     Net::HTTP.new('localhost', PORT).request req
