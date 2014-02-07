@@ -38,7 +38,7 @@ describe RackService do
   DATA = {'name'=>'value'}
   before do
     @logio = StringIO.new
-    rack = Rack::Server.new(Port:PORT, server:'webrick', AccessLog: NULLOG, Logger: NULLOG, app:TestAPI.new(@logio))
+    rack = Rack::Server.new(Host:'127.0.0.1', Port:PORT, server:'webrick', AccessLog: NULLOG, Logger: NULLOG, app:TestAPI.new(@logio))
     t = Thread.new{rack.start{|s|@server=s}}; while !(Net::HTTP.get_response('localhost', '/', PORT) rescue nil); t.join(0); end
   end
   after do
