@@ -1,6 +1,4 @@
-#!/usr/bin/env ruby
-
-require './rackservice'
+require 'rackservice'
 
 require 'minitest/spec'
 require 'minitest/autorun'
